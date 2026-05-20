@@ -2601,6 +2601,17 @@ const submitErase = async (el) => {
     const w = img.naturalWidth || img.width || eraseCanvas.width || 1024
     const h = img.naturalHeight || img.height || eraseCanvas.height || 1024
 
+    let targetWidth = w
+    let targetHeight = h
+    const targetPixels = 3686400
+    
+    const currentPixels = w * h
+    if (currentPixels < targetPixels) {
+      const ratio = w / h
+      targetWidth = Math.round(Math.sqrt(targetPixels * ratio))
+      targetHeight = Math.round(targetPixels / targetWidth)
+    }
+
     const composed = document.createElement('canvas')
     composed.width = w
     composed.height = h
@@ -2630,7 +2641,7 @@ const submitErase = async (el) => {
       generation_mode: 'image_to_image',
       reference_images: [refUrl],
       use_param_adapt: true,
-      ...(w && h ? { width: w, height: h, size: `${w}x${h}` } : {})
+      ...(targetWidth && targetHeight ? { width: targetWidth, height: targetHeight, size: `${targetWidth}x${targetHeight}` } : {})
     }
 
     const closingText = '擦除任务已经完成，需要任何修改请告诉我'
@@ -2645,14 +2656,14 @@ const submitErase = async (el) => {
       chatStore.appendToolResultMessage({
         image_url: finalUrl,
         image_name: imageName,
-        resolution: (w && h) ? `${w}x${h}` : '',
+        resolution: (targetWidth && targetHeight) ? `${targetWidth}x${targetHeight}` : '',
         no_auto_add_to_canvas: true,
         model_identity: targetModelIdentity || ''
       })
       chatStore.appendAssistantMessage(closingText)
 
       const thumbSize = getMinLongSideSize(el.width, el.height, 600)
-      addElement('image', finalUrl, thumbSize.width, thumbSize.height, 'Erased', { nw: w, nh: h })
+      addElement('image', finalUrl, thumbSize.width, thumbSize.height, 'Erased', { nw: targetWidth, nh: targetHeight })
       clearErase(el)
       ElMessage.success('擦除任务已完成')
       return
@@ -2663,9 +2674,9 @@ const submitErase = async (el) => {
         taskId: submitted.taskId,
         imageName,
         modelIdentity: targetModelIdentity,
-        width: w || undefined,
-        height: h || undefined,
-        resolution: (w && h) ? `${w}x${h}` : '',
+        width: targetWidth || undefined,
+        height: targetHeight || undefined,
+        resolution: (targetWidth && targetHeight) ? `${targetWidth}x${targetHeight}` : '',
         toolResultExtra: { no_auto_add_to_canvas: true },
         closingText
       })
@@ -2674,7 +2685,7 @@ const submitErase = async (el) => {
       if (!finalUrl) throw new Error('未获取到擦除结果图片地址')
 
       const thumbSize = getMinLongSideSize(el.width, el.height, 600)
-      addElement('image', finalUrl, thumbSize.width, thumbSize.height, 'Erased', { nw: w, nh: h })
+      addElement('image', finalUrl, thumbSize.width, thumbSize.height, 'Erased', { nw: targetWidth, nh: targetHeight })
       clearErase(el)
       ElMessage.success('擦除任务已完成')
       return
